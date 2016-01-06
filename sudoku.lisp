@@ -7,13 +7,6 @@
   
 (defconstant blank 0)
 
-(defun filter (fn lst)
-  (let ((acc nil))
-    (dolist (x lst)
-      (let ((val (funcall fn x)))
-	(if val (push x acc))))
-    (nreverse acc)))
-
 
 (defun make-posn (x y)
   (list x y))
@@ -57,10 +50,6 @@
       (5 0 7 0 9 0 3 2 0))))
  
 
-;; ; not-zero? :: Int -> Boolean
-(defun not-zero? (x)
-  (not (zerop x)))
-
 ; first-blank-location :: Sudoku -> Posn
        
 (defun first-blank-location (s)
@@ -88,7 +77,7 @@
 ; get-row-elements :: Sudoku -> Int -> [Int]
 (defun get-row-elements (s row)
   "Retrieve the non-blank elements of the row"
-  (filter #'not-zero? (get-row s row)))
+  (remove-if #'zerop (get-row s row)))
 
 ; get-column :: Sudoku -> Int -> [Int]
 (defun get-column (s n)
@@ -97,7 +86,7 @@
 
 ; get-column-elements :: Sudoku -> Int -> [Int]
 (defun get-column-elements (s col)
-  (filter #'not-zero? (get-column s col)))
+  (remove-if #'zerop (get-column s col)))
 
 (defun set-element! (s posn v)
     (setf (aref s (posn-x posn) (posn-y posn)) v))
@@ -107,8 +96,8 @@
   "Delete items in set1 from set2"
   (if (not set1)
       set2
-      (delete-from-set (cdr set1) (filter (lambda (x)
-					     (not (= x (car set1))))
+      (delete-from-set (cdr set1) (remove-if (lambda (x)
+					       (= x (car set1)))
 					 set2))))
 
 ; empty-element? :: Sudoku -> Int -> Int -> Boolean
@@ -128,7 +117,7 @@
 			(2 0) (2 1) (2 2)))))
     (when  trace
       (format t "get-elements-of-3*3: coords: ~s~%" coords))
-    (filter #'not-zero? (mapcar (lambda (x)
+    (remove-if #'zerop (mapcar (lambda (x)
 			     (get-element s
 					  (make-posn
                                            (car x) (cadr x)))) coords))))
