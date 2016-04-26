@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 (defpackage :sudoku
-   (:use :cl :sb-ext)
+   (:use :cl)
    (:export main))
 
 (in-package :sudoku)
@@ -12,10 +12,10 @@
   (list x y))
 
 (defun posn-x (pos)
-  (car pos))
+  (first pos))
 
 (defun posn-y (pos)
-  (cadr pos))
+  (second pos))
 
 
 (defun iota (low high)
@@ -53,13 +53,12 @@
 ; first-blank-location :: Sudoku -> Posn
        
 (defun first-blank-location (s)
-  (block early
     (dotimes (i 9)
       (dotimes (j 9)
 ;	(format t "i= ~d, j= ~d~%" i j)
 	(if (empty-element? s (make-posn i j))
-	    (return-from early (make-posn i j))
-	    nil)))))
+	    (return-from first-blank-location (make-posn i j))
+	    nil))))
 
 (defun solved? (s)
   (not (first-blank-location s)))
@@ -139,46 +138,45 @@
 
 
 
-; solve :: Sudoku -> {False|Sudoku}
+;;; solve :: Sudoku -> {False|Sudoku}
 (defun solve (s)
-		      
   (let* ((loc (first-blank-location s))
 	(elements (get-valid-cell-elements s loc)))
     (try s loc elements 0)))
 
 (defun try (s pos vlist level)
-;    (format t "Level:  ~d~%" level)
-  (cond ((solved? s) s)
+  (cond ((solved? s)
+	 (print-sudoku s)
+	 nil)
 	((null vlist) 
-;   (printf "Failed returning false:\n")
 	 NIL)		;test if no more values can be used in pos
 	(t
-;	   (printf "Trying location ~s ~s with elements ~s\n" (posn-x pos) (posn-y pos) vlist)
+;;	   (printf "Trying location ~s ~s with elements ~s\n" (posn-x pos) (posn-y pos) vlist)
 	 (set-element! s pos (first vlist)) ;set a value for the current position
 	 (cond ((solved? s)
-		s)
-	       (t			;go on to try the next location
-		(cond ((try s (first-blank-location s)
-			    (get-valid-cell-elements s (first-blank-location s))
-			    level)
-		       s)
-		      (t		;Failed on the next location 
-		       (set-element! s pos blank) ; set the current location to blank
+		(print-sudoku s))
+		(t			;go on to try the next location
+		 (cond ((try s (first-blank-location s)
+			     (get-valid-cell-elements s (first-blank-location s))
+			     level)
+			s)
+		       (t		;Failed on the next location 
+			(set-element! s pos blank) ; set the current location to blank
 		       (try s pos (cdr vlist) (+ 1 level))))))))) ;try the next value for this location
 
 
-; print-sudoku :: Sudoku -> Bool
+;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
   (map nil (lambda(row)
 	      (format t  "~{~2d~}~%" (get-row s row)))
 	    '(0 1 2 3 4 5 6 7 8)))
 
-; read-sudoku :: String -> Sudoku
+;;; read-sudoku :: String -> Sudoku
 (defun read-sudoku (file)
   (make-sudoku (with-open-file (p file :if-does-not-exist :error)
     (read p))))
 
-;zip :: List -> List -> List
+;;;zip :: List -> List -> List
 (defun zip (l1 l2)
   (cond ((or (null l1) (null l2)) (list))
         (t
@@ -186,19 +184,29 @@
                     (zip (rest l1) (rest l2))))))
 
 (defun test0 ()
-  (time (print-sudoku (solve (read-sudoku "simple.txt")))))
+  (time (solve (read-sudoku "simple.txt"))))
 
 (defun test1 ()
-  (print-sudoku (solve (read-sudoku "simple.tx1"))))
+  (solve (read-sudoku "simple.tx1")))
 
 (defun main (args)
-;  (let ((args *posix-argv*))
-;  (format t "args: ~s~%" args)
   (if (not (= (length args) 2))
       (format t "Program requires a sudoku file name~%")
       (handler-case
-	  (time (print-sudoku (solve (read-sudoku (car (rest args))))))
+	  (time (solve (read-sudoku (car (rest args)))))
 	(simple-error (err) (format t "~a~%" err))
-	(sb-int:simple-file-error (err)
-	  (format t "~a~%" err)))))
+	#+sbcl (sb-int:simple-file-error (err)
+					       (format t "~a~%" err))
+	#+ccl (ccl::simple-file-error (err)
+					   (format t "~a~%" err))
+	)))
   
+(defun start ()
+  #+sbcl  (main SB-EXT:*POSIX-ARGV*)
+  #+ccl   (main CCL:*COMMAND-LINE-ARGUMENT-LIST*)
+  )
+
+(defun produce-executable ()
+  #+sbcl (sb-ext:save-lisp-and-die "sbcl-sudoku" :toplevel #'start :executable t)
+  #+ccl (ccl:save-application  "ccl-sudoku" :toplevel-function #'start :prepend-kernel t)
+  )
