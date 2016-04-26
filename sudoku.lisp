@@ -34,8 +34,17 @@
 
 
  (defun make-sudoku (s)
+   "Make a sudoku structure using a list of lists as initial values."
    (make-array '(9 9) :initial-contents s))
 
+(defun copy-sudoku (s)
+  "Make a copy of the sudoku s"
+  (let ((ns (make-array '(9 9))))
+        (dotimes (i 9)
+	  (dotimes (j 9)
+	    (let ((pos (make-posn i j)))
+	      (set-element! ns pos (get-element s pos)))))
+	ns))
 
  (defvar simple-sudoku
    (make-sudoku 
@@ -146,28 +155,28 @@
 
 (defun try (s pos vlist level)
   (cond ((solved? s)
-	 (print-sudoku s)
-	 nil)
-	((null vlist) 
-	 NIL)		;test if no more values can be used in pos
-	(t
+	 s)
+	((null vlist) ;test if no more values can be used in pos
+	 nil)	      ;this search has failed
+	(t	      ;More values can be tried at this position
 ;;	   (printf "Trying location ~s ~s with elements ~s\n" (posn-x pos) (posn-y pos) vlist)
-	 (set-element! s pos (first vlist)) ;set a value for the current position
-	 (cond ((solved? s)
-		(print-sudoku s))
-		(t			;go on to try the next location
-		 (cond ((try s (first-blank-location s)
-			     (get-valid-cell-elements s (first-blank-location s))
-			     level)
-			s)
-		       (t		;Failed on the next location 
-			(set-element! s pos blank) ; set the current location to blank
-		       (try s pos (cdr vlist) (+ 1 level))))))))) ;try the next value for this location
-
+	 (let ((scopy (copy-sudoku s)))
+	   (set-element! scopy pos (first vlist)) ;set a value for the current position
+	   (cond ((solved? scopy)
+		  scopy)
+		 (t
+		  (let* ((new-loc (first-blank-location scopy))
+			 (elements (get-valid-cell-elements scopy new-loc))
+			 (result (try scopy new-loc elements (1+ level))))
+		    (if result
+			result
+			(try s pos (rest vlist) level)))))))))
+		  
+		 
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
-  (map nil (lambda(row)
+  (map nil (lambda(row)	     
 	      (format t  "~{~2d~}~%" (get-row s row)))
 	    '(0 1 2 3 4 5 6 7 8)))
 
@@ -184,16 +193,16 @@
                     (zip (rest l1) (rest l2))))))
 
 (defun test0 ()
-  (time (solve (read-sudoku "simple.txt"))))
+  (time (print-sudoku (solve (read-sudoku "simple.txt")))))
 
 (defun test1 ()
-  (solve (read-sudoku "simple.tx1")))
+  (print-sudoku (solve (read-sudoku "simple.tx1"))))
 
 (defun main (args)
   (if (not (= (length args) 2))
       (format t "Program requires a sudoku file name~%")
       (handler-case
-	  (time (solve (read-sudoku (car (rest args)))))
+	  (time (print-sudoku (solve (read-sudoku (car (rest args))))))
 	(simple-error (err) (format t "~a~%" err))
 	#+sbcl (sb-int:simple-file-error (err)
 					       (format t "~a~%" err))
