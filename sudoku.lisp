@@ -9,13 +9,13 @@
 
 
 (defun make-posn (x y)
-  (list x y))
+  (cons x y))
 
 (defun posn-x (pos)
-  (first pos))
+  (car pos))
 
 (defun posn-y (pos)
-  (second pos))
+  (cdr pos))
 
 
 (defun iota (low high)
