@@ -1,10 +1,11 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
-(defpackage :sudoku
-   (:use :cl)
-   (:export main))
+;(defpackage :sudoku
+;   (:use :cl)
+;   (:export main))
 
-(in-package :sudoku)
-  
+;(in-package :sudoku)
+
+
 (defconstant blank 0)
 
 (defun flatten (the-list)
@@ -21,9 +22,29 @@
   "Apply fn to each element of list and append the results."
   (apply #'append (mapcar fn the-list)))
 
+(defun group-by-2 (ls)
+  (flatten (mapcar #'(lambda (x)
+		       (mapcar #'(lambda(y)
+				   (list x y)) ls)) ls)))
+
+(defun group-by-3 (ls)
+  (flatten (mapcar #'(lambda(y)
+		       (mapcar #'(lambda (x)
+				   (cons y x)) (group-by-2 ls))) ls)))
+
+(defun filter (predicate sequence)
+  "Return a sequence with only items that satisfy predicate."
+  (cond ((null sequence) nil)
+	((apply predicate (list (car sequence)))
+	 (cons (car sequence)
+	       (filter predicate (cdr sequence))))
+	(t
+	 (filter predicate (cdr sequence)))))
+
 ;(proclaim '(inline make-posn posn-x posn-y index))
 (defun make-posn (x y)
   (cons x y))
+
 (defun posn-x (pos)
   (car pos))
 
@@ -40,7 +61,8 @@
 (defvar col-indices (iota 0 9))
 
 (defun index (x y)
-  (+ (* x 9) y))
+  (declare (integer x y))
+  (the integer (+ (* x 9) y)))
 
 (defun inverse-index (i)
   (make-posn (floor i 9) (mod i 9)))
@@ -48,14 +70,11 @@
 
  (defun make-sudoku (s)
    "Make a sudoku structure using a list of lists as initial values."
-   (make-array '(81) :initial-contents (flatten s)))
+   (make-array 81 :element-type 'integer :initial-contents (flatten s)))
 
-(defun copy-sudoku (s)
+(defun copy-sudoku(s)
   "Make a copy of the sudoku s"
-  (let ((ns (make-array '(81))))
-        (dotimes (i 81)
-	  (setf (aref ns i) (aref s i)))
-	ns))
+  (copy-seq s))
 
  (defvar simple-sudoku
    (make-sudoku 
@@ -68,13 +87,25 @@
       (0 6 2 0 1 5 0 4 0)
       (0 1 0 7 0 0 0 0 6)
       (5 0 7 0 9 0 3 2 0))))
- 
+
+ (defvar *empty-sudoku*
+   (make-sudoku 
+    '((0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0)
+      (0 0 0 0 0 0 0 0 0))))
+
 ; first-blank-location :: Sudoku -> Posn
        
 (defun first-blank-location (s)
   "Find the first blank location in sudoku but use fact s is vector"
     (dotimes (i 81)
-      (if (= blank (aref s i))
+      (if (= blank (svref s i))
 	    (return-from first-blank-location (inverse-index i))
 	    nil)))
 
@@ -84,7 +115,8 @@
 ; get-element :: Sudoku -> Posn  -> Int
 (defun get-element (s x y)
   "Get a single element from the matrix"
-  (aref s (index x y)))
+  (declare (integer x y))
+  (svref s (index x y)))
 
 ; get-row :: Sudoku -> Int -> [Int]
 (defun get-row (s n)
@@ -214,7 +246,22 @@
 	  (time (print-sudoku (solve (read-sudoku (car (rest args))))))
 	(simple-error (err) (format t "~a~%" err))
 	#+sbcl (sb-int:simple-file-error (err)
-					       (format t "~a~%" err))
+				
+
+(in-package :sudoku)
+
+
+(defconstant blank 0)
+
+(defun flatten (the-list)
+  "Append together elements (or lists) in the list."
+  (mappend #'mklist the-list))
+
+(defun mklist (x)
+  "Return x if it is a list, otherwise (x)."
+  (if (listp x)
+      x
+      (list x)))	       (format t "~a~%" err))
 	#+ccl (ccl::simple-file-error (err)
 					   (format t "~a~%" err))
 	)))
@@ -228,3 +275,119 @@
   #+sbcl (sb-ext:save-lisp-and-die "sbcl-sudoku" :toplevel #'start :executable t)
   #+ccl (ccl:save-application  "ccl-sudoku" :toplevel-function #'start :prepend-kernel t)
   )
+
+;;; Killer sudoku routines
+;;;
+
+(defun kentry-sum (e)
+  (car e))
+
+(defun kentry-coords (e)
+  (second e))
+
+(defun killer-list->posn (l)
+  "Convert a list of pairs to positions."
+  (mapcar #'pair->posn l))
+
+(defun pair->posn (l)
+  (make-posn (first l) (second l)))
+
+; read-killer-sudoku :: String -> [(Int [Cells])]
+(defun read-killer-sudoku (file)
+  (mapcar (lambda (x)
+	    (list (first x) (killer-list->posn (second x))))
+	  (with-open-file (p file :if-does-not-exist :error)
+	    (read p))))
+
+(defun sudoku-bases (s)
+ (mapcar #'(lambda(x)
+	     (list (kentry-sum x) (length (kentry-coords x))
+		   (kentry-coords x))) s))
+
+(defun sum-equal-p (value numeric-list)
+  (= value (apply #'+ numeric-list)))
+
+(defun all-possibilities (tuple-size value)
+  (filter #'(lambda(x)
+	      (sum-equal-p value x))
+	  (case tuple-size
+	    (2 (group-by-2 '(1 2 3 4 5 6 7 8 9)))
+	    (3 (group-by-3 '(1 2 3 4 5 6 7 8 9)))
+	    (4 (error  "Need group by 4"))
+	    (5 (error  "Need group by 5")))))
+
+(defun try-block (grid block-list solutions coords)
+  "Try to place a solution at the specified coordinate list"
+  ;;; each solution  needs to be placed at the specified coordinates
+  ;;; in the sudoku grid
+  (declare (notinline try-block))
+  (cond ((null solutions) nil)
+	(t
+	 (let* ((grid-copy (copy-sudoku grid))
+	       (result (place-solution grid-copy (first solutions) coords)))
+	   (cond ((null result)
+		  (clear-values-at-coords grid-copy coords)
+		  (try-block grid-copy block-list (rest solutions) coords))
+		 (t
+		  (let ((result2 (try-killer result (rest block-list))))
+		    (if result2
+			result2
+			(progn
+			  (try-block grid block-list (rest solutions) coords))))))))))
+
+(defun clear-values-at-coords (sudoku coords)
+  (dolist (i coords)
+    (set-element! sudoku (posn-x i) (posn-y i) 0)))
+
+(defun place-solution (grid solution coords)
+  "Place the individual values from solution at the specified coordinates"
+  (cond ((null solution) grid)
+	(t
+	 (let* ((value (first solution))
+	       (posn (first coords))
+	       (valid-cell-values (get-valid-cell-elements grid (posn-x posn)
+							   (posn-y posn))))
+	   (cond ((member value valid-cell-values)
+		  (set-element! grid (posn-x posn) (posn-y posn) value)
+		  (place-solution grid (rest solution) (rest coords)))
+		 (t
+		  nil))))))
+
+(defun ktest0 ()
+  (let ((killer (read-killer-sudoku "killer.cons")))
+    (sudoku-bases killer)))    
+
+(defun ktest1 ()
+  (let* ((killer (read-killer-sudoku "killer.cons"))
+	 (block (first killer))
+	 (solutions (all-possibilities (length (kentry-coords block))
+				       (kentry-sum block)))
+	 (s (try-block *empty-sudoku* killer solutions (kentry-coords block))))
+    (when s
+      (print-sudoku s))))
+
+(defun ktest2 ()
+  (let ((killer (read-killer-sudoku "killer.cons")))
+    (let ((s (try-killer *empty-sudoku* killer)))
+      (when s
+	(print-sudoku s)))))
+	  
+(defun try-killer (sudoku block-list)
+  "Try setting up a killer sudoku"
+  (cond ((null block-list)
+	 sudoku)
+	(t
+	 (let* ((copy-sud (copy-sudoku sudoku))
+		(block (first block-list))
+		(solutions (all-possibilities (length (kentry-coords block))
+					      (kentry-sum block)))
+		(result (try-block copy-sud block-list solutions (kentry-coords block))))
+	   (cond ((null result)
+		  nil)
+		 (t
+		  (try-killer result (rest block-list))))))))
+
+(defun fact (n)
+  (if (= n 1)
+      1
+      (* n (fact (1- n)))))
