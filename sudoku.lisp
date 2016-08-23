@@ -1,9 +1,9 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
-;(defpackage :sudoku
-;   (:use :cl)
-;   (:export main))
+(defpackage :sudoku
+   (:use :cl)
+   (:export main))
 
-;(in-package :sudoku)
+(in-package :sudoku)
 
 
 (defconstant blank 0)
@@ -61,10 +61,11 @@
 (defvar col-indices (iota 0 9))
 
 (defun index (x y)
-  (declare (integer x y))
-  (the integer (+ (* x 9) y)))
+  (declare (fixnum x y) (optimize (safety 0) (speed 3)))
+  (the fixnum (+ (* x 9) y)))
 
 (defun inverse-index (i)
+  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
   (make-posn (floor i 9) (mod i 9)))
 
 
@@ -248,9 +249,6 @@
 	#+sbcl (sb-int:simple-file-error (err)
 				
 
-(in-package :sudoku)
-
-
 (defconstant blank 0)
 
 (defun flatten (the-list)
@@ -265,16 +263,6 @@
 	#+ccl (ccl::simple-file-error (err)
 					   (format t "~a~%" err))
 	)))
-  
-(defun start ()
-  #+sbcl  (main SB-EXT:*POSIX-ARGV*)
-  #+ccl   (main CCL:*COMMAND-LINE-ARGUMENT-LIST*)
-  )
-
-(defun produce-executable ()
-  #+sbcl (sb-ext:save-lisp-and-die "sbcl-sudoku" :toplevel #'start :executable t)
-  #+ccl (ccl:save-application  "ccl-sudoku" :toplevel-function #'start :prepend-kernel t)
-  )
 
 ;;; Killer sudoku routines
 ;;;

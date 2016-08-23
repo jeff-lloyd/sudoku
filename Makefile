@@ -1,6 +1,6 @@
 all: sbcl-sudoku ccl-sudoku
 sbcl-sudoku: sudoku.lisp
-	sbcl --no-userinit --load sudoku.lisp --eval "(produce-executable)"
+	buildapp --eval '(require :sb-posix)' --asdf-path ~/common-lisp/systems --load-system sudoku --entry sudoku:main --output sbcl-sudoku
 
 ccl-sudoku: sudoku.lisp
 	ccl --no-init --load sudoku.lisp --eval "(produce-executable)"
