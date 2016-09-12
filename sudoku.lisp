@@ -8,6 +8,8 @@
 
 (defconstant blank 0)
 
+(proclaim '(inline make-posn posn-x posn-y index))
+
 (defun flatten (the-list)
   "Append together elements (or lists) in the list."
   (mappend #'mklist the-list))
@@ -41,7 +43,6 @@
 	(t
 	 (filter predicate (cdr sequence)))))
 
-;(proclaim '(inline make-posn posn-x posn-y index))
 (defun make-posn (x y)
   (cons x y))
 
@@ -61,17 +62,20 @@
 (defvar col-indices (iota 0 9))
 
 (defun index (x y)
-  (declare (fixnum x y) (optimize (safety 0) (speed 3)))
+  (declare ((unsigned-byte 8) x y) (optimize (safety 0) (speed 3)))
   (the fixnum (+ (* x 9) y)))
 
 (defun inverse-index (i)
-  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
+;  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
   (make-posn (floor i 9) (mod i 9)))
+
+(deftype tile () `((unsigned-byte 8) 0 9))
+(deftype board () `(simple-array tile (81)))
 
 
  (defun make-sudoku (s)
    "Make a sudoku structure using a list of lists as initial values."
-   (make-array 81 :element-type 'integer :initial-contents (flatten s)))
+   (make-array 81 :element-type 'unsigned-byte :initial-contents (flatten s)))
 
 (defun copy-sudoku(s)
   "Make a copy of the sudoku s"
@@ -116,7 +120,7 @@
 ; get-element :: Sudoku -> Posn  -> Int
 (defun get-element (s x y)
   "Get a single element from the matrix"
-  (declare (integer x y))
+;  (declare (integer x y))
   (svref s (index x y)))
 
 ; get-row :: Sudoku -> Int -> [Int]
@@ -139,7 +143,7 @@
   (remove-if #'zerop (get-column s col)))
 
 (defun set-element! (s x y v)
-    (setf (aref s (index x y)) v))
+    (setf (svref s (index x y)) v))
 
 ; delete-from-set :: [Int] -> [Int] -> [Int]
 (defun delete-from-set (set1 set2)
@@ -218,7 +222,7 @@
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
-  (map nil (lambda(row)	     
+  (mapc (lambda(row)	     
 	      (format t  "~{~2d~}~%" (get-row s row)))
 	    '(0 1 2 3 4 5 6 7 8)))
 
@@ -238,7 +242,7 @@
   (time (print-sudoku (solve (read-sudoku "simple.txt")))))
 
 (defun test1 ()
-  (print-sudoku (solve (read-sudoku "simple.tx1"))))
+  (time (print-sudoku (solve (read-sudoku "super-fiendish8404.txt")))))
 
 (defun main (args)
   (if (not (= (length args) 2))
