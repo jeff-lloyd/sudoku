@@ -5,5 +5,6 @@
   :author "Jeff Lloyd"
   :license "BSD"
   :serial t
+  :depends-on (:iterate :ltk)
   :components (
                (:file "sudoku")))

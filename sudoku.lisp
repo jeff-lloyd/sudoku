@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 (defpackage :sudoku
-   (:use :cl)
+   (:use :cl :iterate :ltk)
    (:export main))
 
 (in-package :sudoku)
@@ -250,23 +250,8 @@
       (handler-case
 	  (time (print-sudoku (solve (read-sudoku (car (rest args))))))
 	(simple-error (err) (format t "~a~%" err))
-	#+sbcl (sb-int:simple-file-error (err)
-				
+	#+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err)))))
 
-(defconstant blank 0)
-
-(defun flatten (the-list)
-  "Append together elements (or lists) in the list."
-  (mappend #'mklist the-list))
-
-(defun mklist (x)
-  "Return x if it is a list, otherwise (x)."
-  (if (listp x)
-      x
-      (list x)))	       (format t "~a~%" err))
-	#+ccl (ccl::simple-file-error (err)
-					   (format t "~a~%" err))
-	)))
 
 ;;; Killer sudoku routines
 ;;;
