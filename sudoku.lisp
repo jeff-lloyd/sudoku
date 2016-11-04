@@ -5,7 +5,6 @@
 
 (in-package :sudoku)
 
-
 (defconstant blank 0)
 
 (proclaim '(inline make-posn posn-x posn-y index))
@@ -52,7 +51,6 @@
 (defun posn-y (pos)
   (cdr pos))
 
-
 (defun iota (low high)
   (if (>= low high)
        '()
@@ -71,7 +69,6 @@
 
 (deftype tile () `((unsigned-byte 8) 0 9))
 (deftype board () `(simple-array tile (81)))
-
 
  (defun make-sudoku (s)
    "Make a sudoku structure using a list of lists as initial values."
@@ -92,18 +89,6 @@
       (0 6 2 0 1 5 0 4 0)
       (0 1 0 7 0 0 0 0 6)
       (5 0 7 0 9 0 3 2 0))))
-
- (defvar *empty-sudoku*
-   (make-sudoku 
-    '((0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0)
-      (0 0 0 0 0 0 0 0 0))))
 
 ; first-blank-location :: Sudoku -> Posn
        
@@ -191,8 +176,6 @@
                          (get-row-elements s x)
                          '(1 2 3 4 5 6 7 8 9))))))
 
-
-
 ;;; solve :: Sudoku -> {False|Sudoku}
 (defun solve (s)
   (let* ((loc (first-blank-location s))
@@ -205,7 +188,6 @@
 	((null vlist) ;test if no more values can be used in pos
 	 nil)	      ;this search has failed
 	(t	      ;More values can be tried at this position
-;;	   (printf "Trying location ~s ~s with elements ~s\n" (posn-x pos) (posn-y pos) vlist)
 	 (let ((scopy (copy-sudoku s)))
 	   (set-element! scopy (posn-x pos) (posn-y pos) (first vlist)) ;set a value for the current position
 	   (cond ((solved? scopy)
@@ -217,8 +199,6 @@
 		    (if result
 			result
 			(try s pos (rest vlist) level)))))))))
-		  
-		 
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
@@ -230,19 +210,6 @@
 (defun read-sudoku (file)
   (make-sudoku (with-open-file (p file :if-does-not-exist :error)
     (read p))))
-
-;;;zip :: List -> List -> List
-(defun zip (l1 l2)
-  (cond ((or (null l1) (null l2)) (list))
-        (t
-         (cons (list (car l1) (car l2))
-                    (zip (rest l1) (rest l2))))))
-
-(defun test0 ()
-  (time (print-sudoku (solve (read-sudoku "simple.txt")))))
-
-(defun test1 ()
-  (time (print-sudoku (solve (read-sudoku "super-fiendish8404.txt")))))
 
 (defun main (args)
   (if (not (= (length args) 2))
@@ -364,7 +331,15 @@
 		 (t
 		  (try-killer result (rest block-list))))))))
 
-(defun fact (n)
-  (if (= n 1)
-      1
-      (* n (fact (1- n)))))
+;;;zip :: List -> List -> List
+(defun zip (l1 l2)
+  (cond ((or (null l1) (null l2)) (list))
+        (t
+         (cons (list (car l1) (car l2))
+                    (zip (rest l1) (rest l2))))))
+
+(defun test0 ()
+  (time (print-sudoku (solve (read-sudoku "simple.txt")))))
+
+(defun test1 ()
+  (time (print-sudoku (solve (read-sudoku "super-fiendish8404.txt")))))
