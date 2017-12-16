@@ -35,24 +35,34 @@
 
 (defun inverse-index (i)
 ;  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
-  (make-posn (floor i 9) (mod i 9)))
+  (multiple-value-bind (q r) (floor i 9)
+  (make-posn q r)))
 
 (deftype tile () `((unsigned-byte 8) 0 9))
 (deftype board () `(simple-array tile (81)))
 
  (defun make-sudoku (s)
    "Make a sudoku structure using a list of lists as initial values."
-   (make-array '(9 9) :element-type 'unsigned-byte :initial-contents s))
+   (make-array 81 :element-type 'unsigned-byte :initial-contents
+	       (mapcan #'(lambda (x) x) s)))
 
 (defun copy-sudoku(s)
   "Make a copy of the sudoku s"
-  (let ((ns (make-array '(9 9) :element-type 'unsigned-byte)))
-    (dotimes (r 9)
-      (dotimes (c 9)
-	(setf (aref ns r c) (aref s r c))))
-    ns))
+  (copy-seq s))
 
  (defvar simple-sudoku
+   (make-sudoku 
+    '((0 3 6 0 4 0 7 0 8)
+      (7 0 0 0 0 1 0 5 0)
+      (0 4 0 8 3 0 9 6 0)
+      (3 0 0 1 0 2 0 8 4)
+      (0 0 0 0 0 0 0 0 0)
+      (8 7 0 6 0 4 0 0 9)
+      (0 6 2 0 1 5 0 4 0)
+      (0 1 0 7 0 0 0 0 6)
+      (5 0 7 0 9 0 3 2 0))))
+
+ (defun make-simple-sudoku ()
    (make-sudoku 
     '((0 3 6 0 4 0 7 0 8)
       (7 0 0 0 0 1 0 5 0)
@@ -68,11 +78,10 @@
        
 (defun first-blank-location (s)
   "Find the first blank location in sudoku but use fact s is vector"
-  (dotimes (r 9)
-    (dotimes (c 9)
-      (if (= blank (aref s r c))
-	  (return-from first-blank-location (make-posn r c))
-	    nil))))
+  (let ((p (position-if #'zerop s)))
+    (if p
+	(inverse-index p)
+	nil)))
 
 (defun solved? (s)
   (not (first-blank-location s)))
@@ -81,12 +90,12 @@
 (defun get-element (s x y)
   "Get a single element from the matrix"
 ;  (declare (integer x y))
-  (aref s x y))
+  (svref s (index x y)))
 
 ; get-row :: Sudoku -> Int -> [Int]
 (defun get-row (s n)
   (mapcar (lambda (col)
-	 (aref s  n col)) col-indices))
+	 (get-element s  n col)) col-indices))
 
 ; get-row-elements :: Sudoku -> Int -> [Int]
 (defun get-row-elements (s row)
@@ -96,23 +105,15 @@
 ; get-column :: Sudoku -> Int -> [Int]
 (defun get-column (s n)
   (mapcar (lambda (row)
-	 (aref s row n)) row-indices))
+	 (get-element s row n)) row-indices))
 
 ; get-column-elements :: Sudoku -> Int -> [Int]
 (defun get-column-elements (s col)
   (remove-if #'zerop (get-column s col)))
 
 (defun set-element! (s x y v)
-    (setf (aref s x y) v))
+    (setf (svref s (index x y)) v))
 
-; delete-from-set :: [Int] -> [Int] -> [Int]
-;; (defun delete-from-set (set1 set2)
-;;   "Delete items in set1 from set2"
-;;   (if (not set1)
-;;       set2
-;;       (delete-from-set (cdr set1) (remove-if (lambda (x)
-;; 					       (= x (car set1)))
-;; 					 set2))))
 
 (defun delete-from-set (set1 set2)
   (set-difference set2 set1))
@@ -199,18 +200,18 @@
 	       (progn
 		 (handler-case
 		     (time (print-sudoku (solve (read-sudoku file))))
-		   (type-error (v)
-		     (format t "Error data format in file: ~a~%" v))
-		   (end-of-file () (format t "End of file received probably closing bracket missing~%"))
 		   (simple-error (err) (format t "~a~%" err))
-		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))))
+		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))
+		   (end-of-file () (format t "End of file received probably closing bracket missing~%"))
+		   (type-error (v)
+		     (format t "Error data format in file: ~a~%" v))))
 	     (format t "No such file ~a~%" file))))))
 
 (defun main-ccl ()
   (main *command-line-argument-list*))
 
 (defun make-image ()
-  (save-application "ccl-sudoku" :toplevel-function #'main-ccl :prepend-kernel t))
+  (save-application "ccl-sudoku-vector" :toplevel-function #'main-ccl :prepend-kernel t))
 
 (defun test1 ()
   (time (main '("sudoku" "super-fiendish8404.txt"))))
