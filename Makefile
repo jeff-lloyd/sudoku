@@ -18,7 +18,7 @@ ccl-sudoku: sudoku.lisp
 ccl-sudoku-vector: sudoku-vector.lisp
 	ccl-buildapp\
 	 $(switches)\
-	 --load-system $@ --entry main --output $@
+	 --load-system sudoku-vector --entry main --output $@
 
 
 .PHONY: clean

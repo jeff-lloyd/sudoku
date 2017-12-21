@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
-(declaim (optimize (speed 3)))
+(declaim (optimize (speed 3) (debug 1)))
 (declaim (inline make-posn posn-x posn-y set-element! get-element))
 (defconstant blank 0)
 
@@ -178,7 +178,7 @@
 
 ;;; read-sudoku :: String -> Sudoku
 (defun read-sudoku (file)
-  (make-sudoku (with-open-file (p file :if-does-not-exist :error)
+  (make-sudoku (with-open-file (p file  :if-does-not-exist :error)
     (read p))))
 
 (defun main (args)
@@ -198,11 +198,6 @@
 		     (format t "Error data format in file: ~a~%" v))))
 	     (format t "No such file ~a~%" file))))))
 
-(defun main-ccl ()
-  (main *command-line-argument-list*))
-
-(defun make-image ()
-  (save-application "ccl-sudoku-vector" :toplevel-function #'main-ccl :prepend-kernel t))
 
 (defun test1 ()
   (time (main '("sudoku" "super-fiendish8404.txt"))))
