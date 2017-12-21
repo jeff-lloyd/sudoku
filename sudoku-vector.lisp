@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
 (declaim (optimize (speed 3) (debug 1)))
-(declaim (inline make-posn posn-x posn-y set-element! get-element))
+(declaim (inline make-posn posn-x posn-y set-element! get-element empty-element?))
 (defconstant blank 0)
 
 ;(proclaim '(inline make-posn posn-x posn-y index get-element))
@@ -106,8 +106,8 @@
     (setf (svref s (index x y)) v))
 
 
-(defun delete-from-set (set1 set2)
-  (set-difference set2 set1))
+(defmacro delete-from-set (set1 set2)
+  `(set-difference ,set2 ,set1))
 
 ; empty-element? :: Sudoku -> Int -> Int -> Boolean
 (defun empty-element? (s
