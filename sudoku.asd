@@ -4,6 +4,8 @@
   :description "solve a sudoku puzzle"
   :author "Jeff Lloyd"
   :license "BSD"
-  :serial t
+
+  :depends-on (:alexandria)
   :components (
-               (:file "sudoku")))
+               (:file "sudoku" :depends-on ("auxfns"))
+	       (:file "auxfns")))

@@ -1,15 +1,10 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
+(declaim (optimize (speed 3)))
+(declaim (inline make-posn posn-x posn-y set-element! get-element))
 (defconstant blank 0)
 
-(proclaim '(inline make-posn posn-x posn-y index))
-
-
-(defun mklist (x)
-  "Return x if it is a list, otherwise (x)."
-  (if (listp x)
-      x
-      (list x)))
+;(proclaim '(inline make-posn posn-x posn-y index get-element))
 
 
 (defun make-posn (x y)
@@ -21,10 +16,6 @@
 (defun posn-y (pos)
   (cdr pos))
 
-(defun iota (low high)
-  (if (>= low high)
-       '()
-       (cons low (iota (+ low 1) high))))
 
 (defvar row-indices (iota 0 9))
 (defvar col-indices (iota 0 9))
@@ -44,7 +35,7 @@
  (defun make-sudoku (s)
    "Make a sudoku structure using a list of lists as initial values."
    (make-array 81 :element-type 'unsigned-byte :initial-contents
-	       (mapcan #'(lambda (x) x) s)))
+	       (flatten s)))
 
 (defun copy-sudoku(s)
   "Make a copy of the sudoku s"
@@ -89,7 +80,7 @@
 ; get-element :: Sudoku -> Posn  -> Int
 (defun get-element (s x y)
   "Get a single element from the matrix"
-;  (declare (integer x y))
+
   (svref s (index x y)))
 
 ; get-row :: Sudoku -> Int -> [Int]

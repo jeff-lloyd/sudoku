@@ -1,15 +1,9 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
 (defconstant blank 0)
+(declaim (optimize (speed 3)))
+(declaim (inline make-posn posn-x posn-y index))
 
-(proclaim '(inline make-posn posn-x posn-y index))
-
-
-(defun mklist (x)
-  "Return x if it is a list, otherwise (x)."
-  (if (listp x)
-      x
-      (list x)))
 
 
 (defun make-posn (x y)
@@ -21,10 +15,6 @@
 (defun posn-y (pos)
   (cdr pos))
 
-(defun iota (low high)
-  (if (>= low high)
-       '()
-       (cons low (iota (+ low 1) high))))
 
 (defvar row-indices (iota 0 9))
 (defvar col-indices (iota 0 9))
@@ -34,23 +24,22 @@
   (the fixnum (+ (* x 9) y)))
 
 (defun inverse-index (i)
-;  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
-  (make-posn (floor i 9) (mod i 9)))
+  
+(declare ((unsigned-byte 32) i))
+  (multiple-value-bind (q r) (floor i 9)
+  (make-posn q r)))
 
 (deftype tile () `((unsigned-byte 8) 0 9))
 (deftype board () `(simple-array tile (81)))
 
- (defun make-sudoku (s)
-   "Make a sudoku structure using a list of lists as initial values."
-   (make-array '(9 9) :element-type 'unsigned-byte :initial-contents s))
+(defun make-sudoku (s)
+  "Make a sudoku structure using a list of lists as initial values."
+  (make-array '(9 9) :element-type 'unsigned-byte :initial-contents s))
 
 (defun copy-sudoku(s)
   "Make a copy of the sudoku s"
-  (let ((ns (make-array '(9 9) :element-type 'unsigned-byte)))
-    (dotimes (r 9)
-      (dotimes (c 9)
-	(setf (aref ns r c) (aref s r c))))
-    ns))
+  (alexandria:copy-array s))
+
 
  (defvar simple-sudoku
    (make-sudoku 
@@ -70,7 +59,7 @@
   "Find the first blank location in sudoku but use fact s is vector"
   (dotimes (r 9)
     (dotimes (c 9)
-      (if (= blank (aref s r c))
+      (if (empty-element? s r c)
 	  (return-from first-blank-location (make-posn r c))
 	    nil))))
 
@@ -80,13 +69,12 @@
 ; get-element :: Sudoku -> Posn  -> Int
 (defun get-element (s x y)
   "Get a single element from the matrix"
-;  (declare (integer x y))
   (aref s x y))
 
 ; get-row :: Sudoku -> Int -> [Int]
 (defun get-row (s n)
   (mapcar (lambda (col)
-	 (aref s  n col)) col-indices))
+	 (get-element s n col)) col-indices))
 
 ; get-row-elements :: Sudoku -> Int -> [Int]
 (defun get-row-elements (s row)
@@ -96,25 +84,19 @@
 ; get-column :: Sudoku -> Int -> [Int]
 (defun get-column (s n)
   (mapcar (lambda (row)
-	 (aref s row n)) row-indices))
+	 (get-element s row n)) row-indices))
 
 ; get-column-elements :: Sudoku -> Int -> [Int]
 (defun get-column-elements (s col)
   (remove-if #'zerop (get-column s col)))
 
+
 (defun set-element! (s x y v)
     (setf (aref s x y) v))
 
-; delete-from-set :: [Int] -> [Int] -> [Int]
-;; (defun delete-from-set (set1 set2)
-;;   "Delete items in set1 from set2"
-;;   (if (not set1)
-;;       set2
-;;       (delete-from-set (cdr set1) (remove-if (lambda (x)
-;; 					       (= x (car set1)))
-;; 					 set2))))
 
 (defun delete-from-set (set1 set2)
+  "Delete set1 from set2"
   (set-difference set2 set1))
 
 ; empty-element? :: Sudoku -> Int -> Int -> Boolean
@@ -158,9 +140,9 @@
 (defun solve (s)
   (let* ((loc (first-blank-location s))
 	(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
-    (try s loc elements 0)))
+    (try s loc elements)))
 
-(defun try (s pos vlist level)
+(defun try (s pos vlist)
   (cond ((solved? s)
 	 s)
 	((null vlist) ;test if no more values can be used in pos
@@ -173,10 +155,10 @@
 		 (t
 		  (let* ((new-loc (first-blank-location scopy))
 			 (elements (get-valid-cell-elements scopy (posn-x new-loc) (posn-y new-loc)))
-			 (result (try scopy new-loc elements (1+ level))))
+			 (result (try scopy new-loc elements)))
 		    (if result
 			result
-			(try s pos (rest vlist) level)))))))))
+			(try s pos (rest vlist))))))))))
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
@@ -206,11 +188,6 @@
 		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))))
 	     (format t "No such file ~a~%" file))))))
 
-(defun main-ccl ()
-  (main *command-line-argument-list*))
-
-(defun make-image ()
-  (save-application "ccl-sudoku" :toplevel-function #'main-ccl :prepend-kernel t))
 
 (defun test1 ()
   (time (main '("sudoku" "super-fiendish8404.txt"))))
