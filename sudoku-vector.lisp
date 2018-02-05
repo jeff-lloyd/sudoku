@@ -1,9 +1,10 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
+(declaim (optimize (speed 3) (debug 1)))
+(declaim (inline make-posn posn-x posn-y set-element! get-element empty-element?))
 (defconstant blank 0)
-(declaim (optimize (speed 3)))
-(declaim (inline make-posn posn-x posn-y index))
 
+;(proclaim '(inline make-posn posn-x posn-y index get-element))
 
 
 (defun make-posn (x y)
@@ -15,6 +16,7 @@
 (defun posn-y (pos)
   (cdr pos))
 
+
 (defvar row-indices (iota 0 9))
 (defvar col-indices (iota 0 9))
 
@@ -23,24 +25,35 @@
   (the fixnum (+ (* x 9) y)))
 
 (defun inverse-index (i)
-  
-(declare ((unsigned-byte 32) i))
+;  (declare ((unsigned-byte 32) i) (optimize (safety 0) (speed 3)))
   (multiple-value-bind (q r) (floor i 9)
   (make-posn q r)))
 
 (deftype tile () `((unsigned-byte 8) 0 9))
 (deftype board () `(simple-array tile (81)))
 
-(defun make-sudoku (s)
-  "Make a sudoku structure using a list of lists as initial values."
-  (make-array '(9 9) :element-type 'unsigned-byte :initial-contents s))
+ (defun make-sudoku (s)
+   "Make a sudoku structure using a list of lists as initial values."
+   (make-array 81 :element-type 'unsigned-byte :initial-contents
+	       (flatten s)))
 
 (defun copy-sudoku(s)
   "Make a copy of the sudoku s"
-  (alexandria:copy-array s))
-
+  (copy-seq s))
 
  (defvar simple-sudoku
+   (make-sudoku 
+    '((0 3 6 0 4 0 7 0 8)
+      (7 0 0 0 0 1 0 5 0)
+      (0 4 0 8 3 0 9 6 0)
+      (3 0 0 1 0 2 0 8 4)
+      (0 0 0 0 0 0 0 0 0)
+      (8 7 0 6 0 4 0 0 9)
+      (0 6 2 0 1 5 0 4 0)
+      (0 1 0 7 0 0 0 0 6)
+      (5 0 7 0 9 0 3 2 0))))
+
+ (defun make-simple-sudoku ()
    (make-sudoku 
     '((0 3 6 0 4 0 7 0 8)
       (7 0 0 0 0 1 0 5 0)
@@ -56,11 +69,10 @@
        
 (defun first-blank-location (s)
   "Find the first blank location in sudoku but use fact s is vector"
-  (dotimes (r 9)
-    (dotimes (c 9)
-      (if (empty-element? s r c)
-	  (return-from first-blank-location (make-posn r c))
-	    nil))))
+  (let ((p (position-if #'zerop s)))
+    (if p
+	(inverse-index p)
+	nil)))
 
 (defun solved? (s)
   (not (first-blank-location s)))
@@ -68,12 +80,13 @@
 ; get-element :: Sudoku -> Posn  -> Int
 (defun get-element (s x y)
   "Get a single element from the matrix"
-  (aref s x y))
+
+  (svref s (index x y)))
 
 ; get-row :: Sudoku -> Int -> [Int]
 (defun get-row (s n)
   (mapcar (lambda (col)
-	 (get-element s n col)) col-indices))
+	 (get-element s  n col)) col-indices))
 
 ; get-row-elements :: Sudoku -> Int -> [Int]
 (defun get-row-elements (s row)
@@ -89,14 +102,12 @@
 (defun get-column-elements (s col)
   (remove-if #'zerop (get-column s col)))
 
-
 (defun set-element! (s x y v)
-    (setf (aref s x y) v))
+    (setf (svref s (index x y)) v))
 
 
-(defun delete-from-set (set1 set2)
-  "Delete set1 from set2"
-  (set-difference set2 set1))
+(defmacro delete-from-set (set1 set2)
+  `(set-difference ,set2 ,set1))
 
 ; empty-element? :: Sudoku -> Int -> Int -> Boolean
 (defun empty-element? (s
@@ -139,9 +150,9 @@
 (defun solve (s)
   (let* ((loc (first-blank-location s))
 	(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
-    (try s loc elements)))
+    (try s loc elements 0)))
 
-(defun try (s pos vlist)
+(defun try (s pos vlist level)
   (cond ((solved? s)
 	 s)
 	((null vlist) ;test if no more values can be used in pos
@@ -154,10 +165,10 @@
 		 (t
 		  (let* ((new-loc (first-blank-location scopy))
 			 (elements (get-valid-cell-elements scopy (posn-x new-loc) (posn-y new-loc)))
-			 (result (try scopy new-loc elements)))
+			 (result (try scopy new-loc elements (1+ level))))
 		    (if result
 			result
-			(try s pos (rest vlist))))))))))
+			(try s pos (rest vlist) level)))))))))
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
@@ -167,7 +178,7 @@
 
 ;;; read-sudoku :: String -> Sudoku
 (defun read-sudoku (file)
-  (make-sudoku (with-open-file (p file :if-does-not-exist :error)
+  (make-sudoku (with-open-file (p file  :if-does-not-exist :error)
     (read p))))
 
 (defun main (args)
@@ -180,11 +191,11 @@
 	       (progn
 		 (handler-case
 		     (time (print-sudoku (solve (read-sudoku file))))
-		   (type-error (v)
-		     (format t "Error data format in file: ~a~%" v))
-		   (end-of-file () (format t "End of file received probably closing bracket missing~%"))
 		   (simple-error (err) (format t "~a~%" err))
-		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))))
+		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))
+		   (end-of-file () (format t "End of file received probably closing bracket missing~%"))
+		   (type-error (v)
+		     (format t "Error data format in file: ~a~%" v))))
 	     (format t "No such file ~a~%" file))))))
 
 
