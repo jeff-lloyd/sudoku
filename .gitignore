@@ -1,2 +1,4 @@
 sbcl-sudoku
+sudoku
 *.res*
+*.fasl
