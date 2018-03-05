@@ -1,5 +1,6 @@
 all: sudoku sudoku-vector ccl-sudoku ccl-sudoku-vector
-switches = --asdf-path ~/common-lisp/systems --manifest-file manifest-file.txt
+#switches = --asdf-path ~/common-lisp/systems --manifest-file manifest-file.txt
+switches = --asdf-path ~/common-lisp/systems
 sudoku: sudoku.lisp
 	buildapp --eval '(require :sb-posix)'\
 	 $(switches)\
