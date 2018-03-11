@@ -1,8 +1,8 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
 (defconstant blank 0)
-(declaim (optimize (speed 3)))
-(declaim (inline make-posn posn-x posn-y index))
+;(declaim (optimize (speed 3)))
+;(declaim (inline make-posn posn-x posn-y index))
 
 
 
@@ -171,21 +171,25 @@
     (read p))))
 
 (defun main (args)
-  (cond ((not (= (length args) 2))
-	 (format t "Program requires a sudoku file name~%")
-	 nil)
-	(t
-	 (let ((file (second args)))
-	   (if (probe-file file)
-	       (progn
-		 (handler-case
-		     (time (print-sudoku (solve (read-sudoku file))))
-		   (type-error (v)
-		     (format t "Error data format in file: ~a~%" v))
-		   (end-of-file () (format t "End of file received probably closing bracket missing~%"))
-		   (simple-error (err) (format t "~a~%" err))
-		   #+sbcl (sb-int:simple-file-error (err) (format t "File error ~a~%" err))))
-	     (format t "No such file ~a~%" file))))))
+;  (format t "args: ~a~%" args)
+  (let ((graphic nil))
+    (cond ((< (length args) 2)
+	   (format t "Program requires a sudoku file name~%")
+	   nil)
+	  (t
+	   (let ((file (second args)))
+	     (if (probe-file file)
+		 (progn
+		   (handler-case
+		       (progn (let ((r (time (solve (read-sudoku file)))))
+				(print-sudoku r)
+				(when (> (length args) 2)
+				  (display-sudoku r))))
+		     (warning (v)
+		       (format t "Error data format in file: ~a~%" v))
+		     (end-of-file () (format t "End of file received probably closing bracket missing~%"))
+		     (simple-error (err) (format t "~a~%" err))))
+		 (format t "No such file ~a~%" file)))))))
 
 
 (defun test1 ()
@@ -201,3 +205,53 @@
 (defun test11 ()
   (time (print-sudoku (solve (read-sudoku "super-fiendish8404.txt")))))
 
+(defun test3 ()
+  (display-sudoku (solve (read-sudoku "simple.txt"))))
+
+(defvar *bwidth* 9)
+(defvar *bheight* 9)
+(defvar *cell-size* 60)
+(defvar *width* (* *bwidth* *cell-size*))
+(defvar *height* (* *bheight* *cell-size*))
+
+(defun display-sudoku (s)
+  (sdl:with-init ()
+    (sdl:window *width* *height* :title-caption "Sudoku")
+    (setf (sdl:frame-rate) 2)
+    (sdl:clear-display (sdl:color :r 127 :g 127 :b 127))
+    (draw-board s)
+    (sdl:with-events ()
+(:quit-event () t)
+      (:key-down-event ()
+		       (when (sdl:key-pressed-p :sdl-key-escape)
+			 (sdl:push-quit-event)))
+(:idle ()
+       (draw-board s)
+	   (sdl:update-display))
+)))
+
+
+(defun draw-board (b)
+  (let ((my-font (sdl:initialise-font sdl:*font-10x20*)))
+(dotimes (row *bheight*)
+    (dotimes (col *bwidth*)
+      (let ((x1 (* col *cell-size*))
+	    (y1 (* row *cell-size*)))
+	(sdl:draw-box-* 
+	 x1
+	 y1
+	 *cell-size* 
+	 *cell-size* 
+	 :surface sdl:*default-display*
+	 :color (sdl:color :r 0
+			   :g 0
+			   :b 127
+			   :a 255)
+	 :stroke-color sdl:*white*)
+	(sdl:draw-string-solid-*
+	 (format nil "~a" (get-element b row col))
+	 (+ x1 (ash *cell-size* -1))
+	 (+ y1 (ash *cell-size* -1))
+	 :color sdl:*white*
+	 :justify :center
+	 :font my-font))))))

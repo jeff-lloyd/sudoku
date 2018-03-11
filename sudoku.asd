@@ -5,7 +5,7 @@
   :author "Jeff Lloyd"
   :license "BSD"
 
-  :depends-on (:alexandria)
+  :depends-on (:alexandria :lispbuilder-sdl)
   :components (
                (:file "sudoku" :depends-on ("auxfns"))
 	       (:file "auxfns")))
