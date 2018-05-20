@@ -1,4 +1,5 @@
-sbcl-sudoku
 sudoku
+sudoku-vector
 *.res*
 *.fasl
+site

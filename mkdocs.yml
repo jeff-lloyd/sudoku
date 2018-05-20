@@ -1,0 +1,4 @@
+site_name: My Sudoku Program
+pages:
+    - Home: index.md
+    - About: about.md
