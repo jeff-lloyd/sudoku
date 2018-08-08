@@ -170,6 +170,9 @@
   (make-sudoku (with-open-file (p file :if-does-not-exist :error)
     (read p))))
 
+(defun main-alt()
+  (main sb-ext:*posix-argv*))
+
 (defun main (args)
 ;  (format t "args: ~a~%" args)
   (let ((graphic nil))
@@ -191,6 +194,8 @@
 		     (simple-error (err) (format t "~a~%" err))))
 		 (format t "No such file ~a~%" file)))))))
 
+(defun make-image()
+  (sb-ext:save-lisp-and-die "sudoku" :toplevel #'main-alt :executable t :purify t))
 
 (defun test1 ()
   (time (main '("sudoku" "super-fiendish8404.txt"))))
