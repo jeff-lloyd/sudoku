@@ -1,8 +1,12 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
 
 (defconstant blank 0)
-;(declaim (optimize (speed 3)))
-;(declaim (inline make-posn posn-x posn-y index))
+(declaim (optimize (speed 3)
+		   (compilation-speed 0)
+		   (safety 1)
+		   (debug 1)
+		   (space 0)))
+(declaim (inline make-posn posn-x posn-y index))
 
 
 
