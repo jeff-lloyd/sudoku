@@ -11,9 +11,7 @@ task :all => ['sudoku', 'sudoku-vector']
 desc "Build the sudoku application"
 
 file :sudoku => %w[sudoku.lisp  auxfns.lisp  sudoku.asd] do |t|
-  #  command = "sbcl  --non-interactive  --eval '(asdf:load-system :sudoku)' --eval '(make-image)' --quit"
   command = "buildapp --asdf-tree #{ENV['HOME']}/quicklisp/dists/quicklisp/software/   --load-system #{t.name} --entry main --output #{t.name}"
-
 #  puts "command: #{command}"
   sh command
 end
@@ -22,8 +20,6 @@ end
 desc "Build the sudoku-vector application"
 file 'sudoku-vector' => %w[sudoku-vector.lisp  auxfns.lisp  sudoku.asd] do |t|
   command = "buildapp --asdf-tree #{ENV['HOME']}/quicklisp/dists/quicklisp/software/ --load-system #{t.name} --entry main --output #{t.name}"
-  #puts "Executing: #{command}"
-#command = "buildapp --manifest-file manifest.txt --load-system #{t.name} --entry main --output #{t.name}"
   #puts "Executing: #{command}"
   sh command
 end
