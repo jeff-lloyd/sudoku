@@ -27,7 +27,7 @@
   (the fixnum (+ (* x 9) y)))
 
 (defun inverse-index (i)
-  
+
 (declare ((unsigned-byte 32) i))
   (multiple-value-bind (q r) (floor i 9)
   (make-posn q r)))
@@ -45,7 +45,7 @@
 
 
  (defvar simple-sudoku
-   (make-sudoku 
+   (make-sudoku
     '((0 3 6 0 4 0 7 0 8)
       (7 0 0 0 0 1 0 5 0)
       (0 4 0 8 3 0 9 6 0)
@@ -57,7 +57,7 @@
       (5 0 7 0 9 0 3 2 0))))
 
 ; first-blank-location :: Sudoku -> Posn
-       
+
 (defun first-blank-location (s)
   "Find the first blank location in sudoku but use fact s is vector"
   (dotimes (r 9)
@@ -120,30 +120,31 @@
     (when  trace
       (format t "get-elements-of-3*3: coords: ~s~%" coords))
     (remove-if #'zerop (mapcar (lambda (x)
-			     (get-element s
-					  
-                                           (car x) (cadr x))) coords))))
+			     (get-element s (car x) (cadr x))) coords))))
 
 ; get-valid-cell-elements :: Sudoku -> Posn -> {->Bool} -> [Int]
 (defun get-valid-cell-elements (s x y &optional mtrace)
   "Retrive the valid values for the specified cell."
-  (when mtrace 
-    (format t "get-valid-cell-elements: i= ~d j=~d mtrace =~s~%" 
+  (when mtrace
+    (format t "get-valid-cell-elements: i= ~d j=~d mtrace =~s~%"
             x y mtrace))
   (if (not (empty-element? s x y))
       '()
       (delete-from-set (get-elements-of-3*3 s x y)
-                       (delete-from-set 
-                        (get-column-elements s y) 
-                        (delete-from-set 
+                       (delete-from-set
+                        (get-column-elements s y)
+                        (delete-from-set
                          (get-row-elements s x)
                          '(1 2 3 4 5 6 7 8 9))))))
 
 ;;; solve :: Sudoku -> {False|Sudoku}
 (defun solve (s)
-  (let* ((loc (first-blank-location s))
-	(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
-    (try s loc elements)))
+  (cond ((solved? s)
+	 s)
+	(t
+	 (let* ((loc (first-blank-location s))
+		(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
+      (try s loc elements)))))
 
 (defun try (s pos vlist)
   (cond ((solved? s)
@@ -153,19 +154,16 @@
 	(t	      ;More values can be tried at this position
 	 (let ((scopy (copy-sudoku s)))
 	   (set-element! scopy (posn-x pos) (posn-y pos) (first vlist)) ;set a value for the current position
-	   (cond ((solved? scopy)
-		  scopy)
+	   (let ((res (solve scopy)))
+	     
+	   (cond ((not(null res))
+		  res)
 		 (t
-		  (let* ((new-loc (first-blank-location scopy))
-			 (elements (get-valid-cell-elements scopy (posn-x new-loc) (posn-y new-loc)))
-			 (result (try scopy new-loc elements)))
-		    (if result
-			result
-			(try s pos (rest vlist))))))))))
+		  (try s pos (rest vlist)))))))))
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
-  (mapc (lambda(row)	     
+  (mapc (lambda(row)
 	      (format t  "~{~2d~}~%" (get-row s row)))
 	    '(0 1 2 3 4 5 6 7 8)))
 
@@ -173,9 +171,6 @@
 (defun read-sudoku (file)
   (make-sudoku (with-open-file (p file :if-does-not-exist :error)
     (read p))))
-
-(defun main-alt()
-  (main sb-ext:*posix-argv*))
 
 (defun main (args)
 ;  (format t "args: ~a~%" args)
@@ -246,11 +241,11 @@
     (dotimes (col *bwidth*)
       (let ((x1 (* col *cell-size*))
 	    (y1 (* row *cell-size*)))
-	(sdl:draw-box-* 
+	(sdl:draw-box-*
 	 x1
 	 y1
-	 *cell-size* 
-	 *cell-size* 
+	 *cell-size*
+	 *cell-size*
 	 :surface sdl:*default-display*
 	 :color (sdl:color :r 0
 			   :g 0

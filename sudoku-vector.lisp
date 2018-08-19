@@ -148,11 +148,14 @@
 
 ;;; solve :: Sudoku -> {False|Sudoku}
 (defun solve (s)
-  (let* ((loc (first-blank-location s))
-	(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
-    (try s loc elements 0)))
+  (cond ((solved? s)
+	 s)
+	(t
+	 (let* ((loc (first-blank-location s))
+		(elements (get-valid-cell-elements s (posn-x loc) (posn-y loc))))
+      (try s loc elements)))))
 
-(defun try (s pos vlist level)
+(defun try (s pos vlist)
   (cond ((solved? s)
 	 s)
 	((null vlist) ;test if no more values can be used in pos
@@ -160,15 +163,12 @@
 	(t	      ;More values can be tried at this position
 	 (let ((scopy (copy-sudoku s)))
 	   (set-element! scopy (posn-x pos) (posn-y pos) (first vlist)) ;set a value for the current position
-	   (cond ((solved? scopy)
-		  scopy)
+	   (let ((res (solve scopy)))
+	     
+	   (cond ((not(null res))
+		  res)
 		 (t
-		  (let* ((new-loc (first-blank-location scopy))
-			 (elements (get-valid-cell-elements scopy (posn-x new-loc) (posn-y new-loc)))
-			 (result (try scopy new-loc elements (1+ level))))
-		    (if result
-			result
-			(try s pos (rest vlist) level)))))))))
+		  (try s pos (rest vlist)))))))))
 
 ;;; print-sudoku :: Sudoku -> Bool
 (defun print-sudoku (s)
