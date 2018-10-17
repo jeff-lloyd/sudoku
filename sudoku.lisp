@@ -1,5 +1,5 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
-
+(in-package :sudoku)
 (defconstant blank 0)
 (declaim (optimize (speed 3)
 		   (compilation-speed 0)
@@ -19,8 +19,8 @@
 (defun posn-y (pos)
   (cdr pos))
 
-(defvar row-indices (iota 0 9))
-(defvar col-indices (iota 0 9))
+(defvar row-indices (iota 9))
+(defvar col-indices (iota 9))
 
 (defun index (x y)
   (declare ((unsigned-byte 8) x y) (optimize (safety 0) (speed 3)))
@@ -193,8 +193,6 @@
 		     (simple-error (err) (format t "~a~%" err))))
 		 (format t "No such file ~a~%" file)))))))
 
-(defun make-image()
-  (sb-ext:save-lisp-and-die "sudoku" :toplevel #'main-alt :executable t :purify t))
 
 (defun test1 ()
   (time (main '("sudoku" "super-fiendish8404.txt"))))
