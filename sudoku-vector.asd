@@ -5,6 +5,7 @@
   :author "Jeff Lloyd"
   :license "BSD"
 
+  :depends-on (:alexandria)
   :components (
-	       (:file "auxfns")
-               (:file "sudoku-vector" :depends-on ("auxfns"))))
+	       (:file "package")
+               (:file "sudoku-vector" :depends-on ("package"))))

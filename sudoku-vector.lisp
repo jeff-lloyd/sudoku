@@ -1,5 +1,5 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: Sudoku -*-
-
+(in-package :sudoku)
 (declaim (optimize (speed 3) (debug 1)))
 (declaim (inline make-posn posn-x posn-y set-element! get-element empty-element?))
 (defconstant blank 0)
@@ -17,8 +17,8 @@
   (cdr pos))
 
 
-(defvar row-indices (iota 0 9))
-(defvar col-indices (iota 0 9))
+(defvar row-indices (iota 9))
+(defvar col-indices (iota 9))
 
 (defun index (x y)
   (declare ((unsigned-byte 8) x y) (optimize (safety 0) (speed 3)))
